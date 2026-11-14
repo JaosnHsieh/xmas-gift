@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "test": "node test/match.test.mjs",
-    "dev": "wrangler dev",
-    "db:local": "wrangler d1 execute xmas-db --local --file=schema.sql"
+    "build": "npx -y esbuild@0.25 src/index.js --bundle --format=esm --outfile=public/_worker.js",
+    "dev": "npm run build && npx wrangler@4 pages dev",
+    "deploy": "npm run build && npx wrangler@4 pages deploy",
+    "db:local": "npx wrangler@4 d1 execute xmas-db --local --file=schema.sql"
   }
 }

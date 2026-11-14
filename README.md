@@ -1,22 +1,24 @@
 # xmas-gift
 
-Anonymous Christmas gift exchange on a Cloudflare Worker + D1. Three pages: home `/`, personal invite `/<6 chars>`, host admin `/a/<ADMIN_PATH>`.
+Anonymous Christmas gift exchange on Cloudflare Pages (advanced mode `_worker.js`) + D1. Source is a plain Worker module in `src/`; `npm run build` bundles it into `public/_worker.js`. Three pages: home `/`, personal invite `/<6 chars>`, host admin `/a/<ADMIN_PATH>`.
 
 ## Run locally
 ```bash
 npm run test                 # pairing tests
 npm run db:local             # create local tables
-npx wrangler dev             # uses .dev.vars (ADMIN_PATH, ADMIN_PASSWORD)
+npm run dev                  # builds, then pages dev; uses .dev.vars (ADMIN_PATH, ADMIN_PASSWORD)
 ```
 
-## Deploy (once)
+## Deploy
 ```bash
-npx wrangler d1 create xmas-db            # copy the database_id into wrangler.toml
+npx wrangler d1 create xmas-db            # once; copy database_id into wrangler.toml
 npx wrangler d1 execute xmas-db --remote --file=schema.sql
-printf '%s' "<hidden-path>" | npx wrangler secret put ADMIN_PATH
-printf '%s' "<password>"    | npx wrangler secret put ADMIN_PASSWORD
-npx wrangler deploy
+npx wrangler pages project create <name> --production-branch main --force   # --force: wrangler 4 otherwise delegates to Workers
+printf '%s' "<hidden-path>" | npx wrangler pages secret put ADMIN_PATH --project-name <name>
+printf '%s' "<password>"    | npx wrangler pages secret put ADMIN_PASSWORD --project-name <name>
+npm run deploy -- --project-name <name> --branch main
 ```
+Live: https://xmas-wy380k.pages.dev
 
 ## Host flow
 1. Open `/a/<ADMIN_PATH>`, sign in, set event title / time / place.
@@ -33,6 +35,6 @@ npx wrangler deploy
 
 ## After the event
 ```bash
-npx wrangler delete xmas
+npx wrangler pages project delete xmas-wy380k
 npx wrangler d1 delete xmas-db
 ```
