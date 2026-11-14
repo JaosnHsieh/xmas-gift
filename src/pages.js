@@ -159,7 +159,7 @@ export function homePage({ settings, people }) {
   const matched = status !== "collecting";
   const note = matched
     ? `<div class="hint">${bi("配對完成！請用你專屬的連結查看要買給誰（匿名）。", "Matching is done! Open your personal link to see who you’re buying for (anonymous).")}</div>`
-    : `<div class="hint">${bi("請用主辦人私訊給你的專屬連結填 Wish List。", "Use the personal link the host sent you to fill your wish list.")}</div>`;
+    : `<div class="hint">${bi("請用私訊給你的專屬連結填 Wish List。", "Use the personal link sent to you to fill your wish list.")}</div>`;
   const progress = matched
     ? `<p class="muted">${bi(`已買好 ${bought} / ${people.length}`, `Gifts bought: ${bought} of ${people.length}`)}</p>`
     : `<p class="muted">${bi(`已填 Wish List ${filled} / ${people.length}`, `Wish lists done: ${filled} of ${people.length}`)}</p>`;
@@ -168,8 +168,8 @@ export function homePage({ settings, people }) {
 ${rulesCard()}${eventCard(settings)}
 <section class="card"><h2>${bi("👥 參加的人", "Who’s in")}</h2>${progress}
 ${people.length ? `<ul class="names">${people.map((p) => `<li class="${(matched ? p.bought : p.wish_json) ? "ok" : ""}">${esc(p.name)}${(matched ? p.bought : p.wish_json) ? " ✓" : ""}</li>`).join("")}</ul>` : `<p class="muted">${bi("還沒有人", "Nobody yet")}</p>`}
-<p class="en" style="margin-top:12px">${"Pairings are secret. Nobody but the host’s computer knows who buys for whom."}</p></section>
-<footer>${bi("連結搞丟了？問主辦人。", "Lost your link? Ask the host.")}</footer>`;
+<p class="en" style="margin-top:12px">${"Pairings are secret. Nobody but the system knows who buys for whom."}</p></section>
+<footer>${bi("連結搞丟了？請再跟發給你的人要一次。", "Lost your link? Ask whoever sent it to you.")}</footer>`;
   return layout("聖誕交換禮物 Gift Exchange", body);
 }
 
@@ -304,7 +304,7 @@ export function invitePage({ me, status, recipient, settings }) {
 <details class="card"><summary>${bi("我自己的 Wish List", "My own wish list")}</summary>${renderWish(wish)}</details>`;
   } else {
     main = `<section class="card"><h2>${bi("📝 我的 Wish List", "My wish list")}</h2>
-${wish ? `<p class="ok">${bi("已填好，配對前可以修改。", "Done. You can still edit until matching.")}</p>` : `<p class="muted">${bi("請先填好，主辦人才能配對。", "Please fill this in so the host can match everyone.")}</p>`}
+${wish ? `<p class="ok">${bi("已填好，配對前可以修改。", "Done. You can still edit until matching.")}</p>` : `<p class="muted">${bi("請先填好 Wish List，才能開始配對。", "Please fill this in so matching can start.")}</p>`}
 ${wishForm(wish)}</section>`;
   }
   const data = { cats: CATEGORIES, max: LIMITS.maxCats, wish };
@@ -351,7 +351,7 @@ $('resetBtn') && ($('resetBtn').onclick = async () => {
 `;
 
 export function loginPage(base, error) {
-  return layout("Admin", `<div class="hero"><div class="tree">🔒</div><h1>${bi("主辦人後台", "Host admin")}</h1></div>
+  return layout("Admin", `<div class="hero"><div class="tree">🔒</div><h1>${bi("後台", "Admin")}</h1></div>
 <section class="card"><form method="post" action="${esc(base)}/login"><label class="lbl">${bi("密碼", "Password")}</label>
 <input type="password" name="password" autofocus required autocomplete="current-password">
 ${error ? `<p class="err">${bi("密碼不對", "Wrong password")}</p>` : ""}
@@ -371,7 +371,7 @@ export function adminPage({ base, origin, settings, people }) {
 <td style="white-space:nowrap"><button class="btn small ghost" data-copy="${esc(link)}" data-name="${esc(p.name)}">copy</button>
 ${matched ? "" : `<button class="btn small ghost" data-del="${esc(p.code)}" data-name="${esc(p.name)}">✕</button>`}</td></tr>`;
   }).join("");
-  const body = `<div class="hero"><div class="tree">🛠️</div><h1>${bi("主辦人後台", "Host admin")}</h1></div>
+  const body = `<div class="hero"><div class="tree">🛠️</div><h1>${bi("後台", "Admin")}</h1></div>
 <section class="card"><h2>${bi("活動設定", "Event settings")}</h2>
 <label class="lbl">${bi("目前狀態", "Status")}</label><select id="status">${STATUSES.map((s) => `<option value="${s.id}" ${s.id === status ? "selected" : ""}>${esc(s.zh)} ${esc(s.en)}</option>`).join("")}</select>
 <label class="lbl">${bi("活動名稱", "Title")}</label><input type="text" id="etitle" maxlength="60" value="${esc(settings.event_title || "聖誕交換禮物")}">

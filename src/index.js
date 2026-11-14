@@ -15,7 +15,7 @@ const html = (s, status = 200) =>
 const json = (o, status = 200) =>
   new Response(JSON.stringify(o), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
 const notFound = () =>
-  html(layout("404", `<div class="hero"><div class="tree">❄️</div><h1>找不到這個連結<span class="en">Link not found</span></h1></div><section class="card"><p>請向主辦人確認你的專屬連結。<span class="en">Please check your personal link with the host.</span></p><p><a href="/">← 回首頁 Home</a></p></section>`), 404);
+  html(layout("404", `<div class="hero"><div class="tree">❄️</div><h1>找不到這個連結<span class="en">Link not found</span></h1></div><section class="card"><p>請確認你的專屬連結是否正確。<span class="en">Please check that your personal link is correct.</span></p><p><a href="/">← 回首頁 Home</a></p></section>`), 404);
 
 function newCode() {
   const b = crypto.getRandomValues(new Uint8Array(6));
