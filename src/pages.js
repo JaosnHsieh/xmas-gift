@@ -43,7 +43,11 @@ h2{font-size:1.4rem;margin:0 0 8px;color:var(--green)}
 .badge{align-self:flex-start;text-align:center;line-height:1.3}
 .badge.bad{background:#7a6a58}.badge.good{background:var(--red)}
 ul.plain{margin:4px 0 0;padding-left:1.2em}
+.sub{background:#fff1d0;border-left:5px solid var(--green);border-radius:10px;padding:8px 12px;margin-top:10px;font-size:.95rem}
 ul.plain li{margin:2px 0}
+.rule b .zh{font-size:1.05em}
+.rule b .en{font-weight:600}
+.rule .det{font-size:.9em}
 .names{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 0;padding:0;list-style:none}
 .names li{background:#fff;border:2px solid #e6d8b4;border-radius:999px;padding:4px 14px;font-size:.95rem}
 .names li.ok{border-color:#3f8f63}
@@ -101,15 +105,16 @@ function stepper(status) {
 }
 
 export function rulesCard() {
-  return `<section class="card"><h2>${bi("🎁 交換禮物規則", "Gift exchange rules")}</h2>
+  return `<section class="card"><h2>${bi("🎁 每人準備 2 份禮物", "Bring two gifts each")}</h2>
 <div class="rule"><span class="badge bad">${bi("壞禮物", "Bad gift")}</span><div>
-<ul class="plain"><li>${bi("CA$10 以下", "Under CA$10")}</li><li>${bi("不能過期", "Must not expire")}</li><li>${bi("全新未拆封", "New and sealed")}</li></ul>
-<div class="en">${"Brought to the party for the game. Not matched online."}</div></div></div>
+<b>${bi("現場玩，不配對", "Played at the party. No matching")}</b>
+<div class="det">${bi("CA$10 以下 ・ 不過期 ・ 全新未拆封", "Under CA$10 · no expiry · new and sealed")}</div></div></div>
 <div class="rule"><span class="badge good">${bi("好禮物", "Good gift")}</span><div>
-<ul class="plain"><li>${bi("CA$40 以上", "CA$40 or more")}</li><li>${bi("必須買對方 Wish List 上的東西", "Must come from the receiver’s wish list")}</li></ul>
-<div class="en">The site matches you with one person to buy this for.</div></div></div>
-<div class="rule"><span class="badge" style="background:var(--green)">Wish List</span><div>
-${bi("不限品項。可選最多 3 種類別，也可以自己輸入；都可以就選「都可以」，讓送禮的人決定。", "Anything goes. Pick up to 3 categories or type your own. If anything is fine, choose “Anything’s fine” and let your gifter decide.")}</div></div></section>`;
+<b>${bi("買給配對到的人", "For the person you’re matched with")}</b>
+<div class="det">${bi("CA$40 以上 ・ 買對方 Wish List 上的東西", "CA$40 or more · from their wish list")}</div>
+<div class="sub"><b>${bi("📝 Wish List 怎麼填", "How to fill your wish list")}</b>
+${bi("用專屬連結，選最多 3 種類別，或直接寫想要的東西。都可以就選「都可以」。", "Use your personal link. Pick up to 3 categories or type what you want. If anything is fine, choose “Anything’s fine”.")}</div></div></div>
+<p class="muted" style="margin:10px 0 0">${bi("📺 活動當天，電視會揭曉誰送誰。", "On party day the TV reveals who gives to whom.")}</p></section>`;
 }
 
 function fmtDate(v) {
@@ -271,7 +276,7 @@ function wishForm(wish) {
 <label class="choice" data-mode="any"><input type="radio" name="mode" value="any"><span>${bi("都可以，讓送禮的人決定", "Anything’s fine. Let my gifter decide")}</span></label>
 <label class="choice" data-mode="list"><input type="radio" name="mode" value="list"><span>${bi("我想選種類或寫想要的東西", "I’ll pick categories or name what I want")}</span></label>
 <div id="listbox" hidden>
-<div class="hint">${bi("想要鐵鏟？不用選類別，直接在下方「想要的項目」輸入「鐵鏟」就好（類別裡不會有鐵鏟）。", "Want a shovel? Skip the categories and just type “shovel” under Specific items. Categories don’t list individual products.")}</div>
+<div class="hint">${bi("想要鐵鏟？直接在下方「想要的項目」輸入「鐵鏟」就好。", "Want a shovel? Just type “shovel” under Specific items.")}</div>
 <label class="lbl">${bi("類別（1 到 3 個）", "Categories (1 to 3)")} <span class="muted" id="catcount">0 / 3</span></label>
 <div class="combo"><div class="chips" id="chips"></div>
 <input type="text" id="catq" autocomplete="off" enterkeyhint="done" placeholder="搜尋或輸入類別 Search or type a category"><ul class="list" id="catlist" hidden></ul></div>
