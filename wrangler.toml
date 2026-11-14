@@ -1,0 +1,11 @@
+name = "xmas"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+preview_urls = false
+
+# Replace database_id with the real id after `wrangler d1 create xmas-db` (local dev works with the placeholder).
+[[d1_databases]]
+binding = "DB"
+database_name = "xmas-db"
+database_id = "030fe138-b816-4419-a029-a579bf1d5ee0"

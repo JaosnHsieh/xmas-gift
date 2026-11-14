@@ -1,0 +1,10 @@
+{
+  "name": "xmas-gift",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test/match.test.mjs",
+    "dev": "wrangler dev",
+    "db:local": "wrangler d1 execute xmas-db --local --file=schema.sql"
+  }
+}
