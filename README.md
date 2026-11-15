@@ -23,7 +23,7 @@ Live: https://xmas-wy380k.pages.dev
 ## Host flow
 1. Open `/a/<ADMIN_PATH>`, sign in, set event title / time / place.
 2. Paste names or Instagram handles (one per line) to create links; copy each link and DM it to that person.
-3. Optional: set who lives together in the "Lives with" column (couples, housemates). People in the same household are never matched to each other. Participants can also set it on their own page.
+3. Optional: set who lives together in the "Lives with" column (couples, housemates). People in the same household are never matched to each other.
 4. When everyone has filled in a wish list, press the match button (status becomes "matched").
    Nobody sees the pairs: there is no peek button. Each person only sees the receiver's wish list.
 5. Party day: open `/a/<ADMIN_PATH>/reveal` on the TV (sign in there). It unlocks from 1 hour before

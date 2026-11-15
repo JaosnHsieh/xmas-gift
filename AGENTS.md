@@ -31,5 +31,5 @@ npm run deploy -- --project-name <name> --branch main
 - UI is Traditional Chinese with small English underneath (`bi(zh, en)`). Keep copy short and simple.
 - Escape all user text with `esc()` on the server; build client DOM with `textContent`.
 - Nothing may reveal pairs early: no admin peek, the reveal page gives one pair per call and is date-locked.
-- Households (`grp`, see `src/groups.js`): never match people in one household; invite pages show opaque ids, never other people's codes (a code is a personal link).
+- Households (`grp`, see `src/groups.js`): never match people in one household; only the admin sets them (keep rules simple, participants never see household settings).
 - After matching, wish lists lock and the event date can only move later.
