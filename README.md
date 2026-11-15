@@ -23,15 +23,19 @@ Live: https://xmas-wy380k.pages.dev
 ## Host flow
 1. Open `/a/<ADMIN_PATH>`, sign in, set event title / time / place.
 2. Paste names or Instagram handles (one per line) to create links; copy each link and DM it to that person.
-3. When everyone has filled in a wish list, press the match button (status becomes "matched").
+3. Optional: set who lives together in the "Lives with" column (couples, housemates). People in the same household are never matched to each other. Participants can also set it on their own page.
+4. When everyone has filled in a wish list, press the match button (status becomes "matched").
    Nobody sees the pairs: there is no peek button. Each person only sees the receiver's wish list.
-4. Party day: open `/a/<ADMIN_PATH>/reveal` on the TV (sign in there). It unlocks from 1 hour before
+5. Party day: open `/a/<ADMIN_PATH>/reveal` on the TV (sign in there). It unlocks from 1 hour before
    the event start (Eastern time). Type `REVEAL`, re-enter the password, tick the box. The server then hands
    out one pair per press (Space / Next), as a chain: each receiver becomes the next giver.
    Reload-safe; Replay uses the pairs already shown.
-5. Rehearse first with `/a/<ADMIN_PATH>/reveal?demo=1` (fake names, no real data).
-6. After matching the event date can only move later, so the date lock can't be bypassed from the admin page.
+6. Rehearse first with `/a/<ADMIN_PATH>/reveal?demo=1` (fake names, no real data).
+7. After matching the event date can only move later, so the date lock can't be bypassed from the admin page.
    (Whoever can run `wrangler` could still read the database. That is the only way to see pairs early.)
+
+## Upgrading an existing database
+Older databases need the household column once: `npx wrangler d1 execute xmas-db --remote --command "ALTER TABLE participants ADD COLUMN grp TEXT"`.
 
 ## After the event
 ```bash

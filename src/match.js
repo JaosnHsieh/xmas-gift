@@ -32,9 +32,40 @@ export function walkRing(gives, start, count) {
   return out;
 }
 
+const sameGroup = (groups, a, b) => groups.has(a) && groups.get(a) === groups.get(b);
+const ringOk = (ring, groups) => ring.every((c, i) => !sameGroup(groups, c, ring[(i + 1) % ring.length]));
+const toPairs = (ring) => ring.map((giver, i) => [giver, ring[(i + 1) % ring.length]]);
+
+// Fallback when random shuffles keep failing: biggest groups first, fill even seats then odd seats.
+function spreadRing(codes, groups, rand) {
+  const buckets = new Map();
+  for (const c of shuffle(codes, rand)) {
+    const key = groups.get(c) || "solo:" + c;
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(c);
+  }
+  const ordered = shuffle([...buckets.values()], rand).sort((x, y) => y.length - x.length).flat();
+  const seats = [];
+  for (let i = 0; i < codes.length; i += 2) seats.push(i);
+  for (let i = 1; i < codes.length; i += 2) seats.push(i);
+  const ring = new Array(codes.length);
+  ordered.forEach((c, i) => (ring[seats[i]] = c));
+  return ring;
+}
+
 // Returns an array of [giver, receiver] pairs.
-export function makeRing(codes, rand = randInt) {
+// `groups` (Map code -> group id) lists people who must not be matched to each other.
+// Throws Error("households") when the groups make a single ring impossible.
+export function makeRing(codes, groups = new Map(), rand = randInt) {
   if (codes.length < 3) throw new Error("need at least 3 people");
-  const ring = shuffle(codes, rand);
-  return ring.map((giver, i) => [giver, ring[(i + 1) % ring.length]]);
+  const size = new Map();
+  for (const c of codes) if (groups.has(c)) size.set(groups.get(c), (size.get(groups.get(c)) || 0) + 1);
+  if (Math.max(0, ...size.values()) > Math.floor(codes.length / 2)) throw new Error("households");
+  for (let t = 0; t < 2000; t++) {
+    const ring = shuffle(codes, rand);
+    if (ringOk(ring, groups)) return toPairs(ring);
+  }
+  const ring = spreadRing(codes, groups, rand);
+  if (!ringOk(ring, groups)) throw new Error("households");
+  return toPairs(ring);
 }

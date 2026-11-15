@@ -1,5 +1,6 @@
 import { parseWish } from "./data.js";
 import { makeRing, walkRing } from "./match.js";
+import { linkPartner, pruneGroups, groupChanges } from "./groups.js";
 import { homePage, invitePage, loginPage, adminPage, layout, esc, endStamp, icsStamp } from "./pages.js";
 import { revealPage } from "./reveal.js";
 
@@ -41,7 +42,14 @@ async function getSettings(db) {
 const setSetting = (db, k, v) =>
   db.prepare("INSERT INTO settings (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = ?2").bind(k, v);
 const getPeople = async (db) =>
-  (await db.prepare("SELECT code, name, wish_json, gives_to, bought FROM participants ORDER BY created_at, name").all()).results;
+  (await db.prepare("SELECT code, name, wish_json, gives_to, bought, grp FROM participants ORDER BY created_at, name").all()).results;
+
+const groupMap = (people) => new Map(people.filter((p) => p.grp).map((p) => [p.code, p.grp]));
+// Write the households that changed. `next` is the new code -> group Map.
+async function saveGroups(db, people, next) {
+  const changes = groupChanges(groupMap(people), next, people.map((p) => p.code));
+  if (changes.length) await db.batch(changes.map(([c, g]) => db.prepare("UPDATE participants SET grp = ?2 WHERE code = ?1").bind(c, g)));
+}
 
 // ---------- admin auth ----------
 async function hmac(secret, msg) {
@@ -49,6 +57,8 @@ async function hmac(secret, msg) {
   return new Uint8Array(await crypto.subtle.sign("HMAC", key, enc.encode(msg)));
 }
 const hex = (u8) => Array.from(u8, (b) => b.toString(16).padStart(2, "0")).join("");
+// Opaque id shown on invite pages instead of a code (a code is somebody's personal link).
+const publicId = async (env, code) => hex(await hmac(env.ADMIN_PASSWORD || "x", "pid:" + code)).slice(0, 12);
 async function safeEqual(a, b) {
   const [ha, hb] = await Promise.all([crypto.subtle.digest("SHA-256", enc.encode(a)), crypto.subtle.digest("SHA-256", enc.encode(b))]);
   return crypto.subtle.timingSafeEqual(ha, hb);
@@ -205,6 +215,18 @@ async function adminApi(db, body) {
       const settings = await getSettings(db);
       if ((settings.status || "collecting") !== "collecting") return json({ ok: false, error: "已配對 Already matched" }, 400);
       await db.prepare("DELETE FROM participants WHERE code = ?1").bind(String(body.code)).run();
+      const left = await getPeople(db);
+      await saveGroups(db, left, pruneGroups(groupMap(left)));
+      return json({ ok: true });
+    }
+    case "link": {
+      const settings = await getSettings(db);
+      if ((settings.status || "collecting") !== "collecting") return json({ ok: false, error: "已配對 Already matched" }, 400);
+      const people = await getPeople(db);
+      const code = String(body.code || "");
+      const other = String(body.other || "");
+      if (!people.some((p) => p.code === code) || (other && !people.some((p) => p.code === other))) return json({ ok: false, error: "not found" }, 400);
+      await saveGroups(db, people, linkPartner(groupMap(people), code, other, newCode));
       return json({ ok: true });
     }
     case "match": {
@@ -214,7 +236,13 @@ async function adminApi(db, body) {
       if (people.length < 3) return json({ ok: false, error: "至少 3 人 Need at least 3 people" }, 400);
       const missing = people.filter((p) => !p.wish_json);
       if (missing.length && !body.fill_missing) return json({ ok: false, error: `還有 ${missing.length} 人沒填 ${missing.length} not filled in` }, 400);
-      const pairs = makeRing(people.map((p) => p.code));
+      let pairs;
+      try {
+        pairs = makeRing(people.map((p) => p.code), groupMap(people));
+      } catch (e) {
+        if (e.message !== "households") throw e;
+        return json({ ok: false, error: "同住的人太多，排不成一圈（每一組不能超過總人數的一半） Too many people in one household to match" }, 400);
+      }
       const stmts = [
         ...missing.map((p) => db.prepare("UPDATE participants SET wish_json = ?2, wish_at = datetime('now') WHERE code = ?1").bind(p.code, JSON.stringify({ mode: "any" }))),
         ...pairs.map(([g, r]) => db.prepare("UPDATE participants SET gives_to = ?2, bought = 0 WHERE code = ?1").bind(g, r)),
@@ -263,7 +291,14 @@ async function inviteRoute(request, env, url, code, sub) {
     const recipient = status !== "collecting" && me.gives_to
       ? await env.DB.prepare("SELECT wish_json FROM participants WHERE code = ?1").bind(me.gives_to).first()
       : null;
-    return html(invitePage({ me, status, recipient, settings }));
+    let couple = null;
+    if (status === "collecting") {
+      const people = await getPeople(env.DB);
+      const others = await Promise.all(people.filter((p) => p.code !== code).map(async (p) => ({ id: await publicId(env, p.code), name: p.name })));
+      const mates = people.filter((p) => me.grp && p.grp === me.grp && p.code !== code);
+      couple = { others, current: mates.length ? await publicId(env, mates[0].code) : "", mates: mates.map((p) => p.name) };
+    }
+    return html(invitePage({ me, status, recipient, settings, couple }));
   }
   if (request.method !== "POST" || (request.headers.get("origin") || url.origin) !== url.origin) return notFound();
   const body = await readJson(request);
@@ -273,6 +308,18 @@ async function inviteRoute(request, env, url, code, sub) {
     const r = parseWish(body);
     if (r.error) return json({ ok: false, error: r.error }, 400);
     await env.DB.prepare("UPDATE participants SET wish_json = ?2, wish_at = datetime('now') WHERE code = ?1").bind(code, JSON.stringify(r.wish)).run();
+    return json({ ok: true });
+  }
+  if (sub === "/partner") {
+    if (status !== "collecting") return json({ ok: false, error: "已配對，不能再改 Matching is done" }, 409);
+    const people = await getPeople(env.DB);
+    const wanted = String(body.other || "");
+    let other = "";
+    if (wanted) {
+      for (const p of people) if (p.code !== code && (await publicId(env, p.code)) === wanted) other = p.code;
+      if (!other) return json({ ok: false, error: "找不到這個人 Person not found" }, 400);
+    }
+    await saveGroups(env.DB, people, linkPartner(groupMap(people), code, other, newCode));
     return json({ ok: true });
   }
   if (sub === "/bought") {
@@ -302,7 +349,7 @@ export default {
         const base = `/a/${env.ADMIN_PATH}`;
         if (path === base || path.startsWith(base + "/")) return adminRoute(request, env, url, path.slice(base.length));
       }
-      const m = /^\/([^/]+)(\/wish|\/bought)?$/.exec(path);
+      const m = /^\/([^/]+)(\/wish|\/bought|\/partner)?$/.exec(path);
       if (m && CODE_RE.test(m[1])) return inviteRoute(request, env, url, m[1], m[2] || "");
       return notFound();
     } catch (e) {

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { makeRing, walkRing } from "../src/match.js";
+import { linkPartner, pruneGroups, groupChanges } from "../src/groups.js";
 
 assert.throws(() => makeRing(["a", "b"]));
 
@@ -45,5 +46,66 @@ for (let i = 0; i < 6000; i++) {
   for (const k of ["p1", "p2", "p3"]) if (m.get(k) === "p0") counts[k]++;
 }
 for (const c of Object.values(counts)) assert.ok(c > 1700 && c < 2300, JSON.stringify(counts));
+
+// households: nobody is matched to a housemate, in either direction
+for (let n = 4; n <= 30; n++) {
+  const codes = Array.from({ length: n }, (_, i) => "p" + i);
+  const groups = new Map();
+  for (let i = 0; i + 1 < n && i < 10; i += 2) {
+    groups.set(codes[i], "g" + i);
+    groups.set(codes[i + 1], "g" + i);
+  }
+  for (let run = 0; run < 500; run++) {
+    const pairs = makeRing(codes, groups);
+    const gives = new Map(pairs);
+    assert.equal(gives.size, n);
+    assert.equal(new Set(gives.values()).size, n);
+    for (const [g, r] of pairs) {
+      assert.notEqual(g, r);
+      assert.ok(!(groups.has(g) && groups.get(g) === groups.get(r)), "housemates must not be matched");
+    }
+    let cur = codes[0], steps = 0;
+    do { cur = gives.get(cur); steps++; } while (cur !== codes[0]);
+    assert.equal(steps, n, "single ring");
+  }
+}
+// a trio of housemates among 6 people still works; too big a household throws
+{
+  const codes = ["a", "b", "c", "d", "e", "f"];
+  const trio = new Map([["a", "x"], ["b", "x"], ["c", "x"]]);
+  for (let i = 0; i < 300; i++) for (const [g, r] of makeRing(codes, trio)) assert.ok(!(trio.has(g) && trio.has(r)));
+  assert.throws(() => makeRing(["a", "b", "c"], new Map([["a", "x"], ["b", "x"]])), /households/);
+  assert.throws(() => makeRing(["a", "b", "c", "d", "e"], new Map([["a", "x"], ["b", "x"], ["c", "x"]])), /households/);
+  // exactly half the group: a circle must alternate, still possible
+  const half = new Map([["a", "x"], ["b", "x"], ["c", "x"]]);
+  for (let i = 0; i < 200; i++) for (const [g, r] of makeRing(codes, half)) assert.ok(!(half.has(g) && half.has(r)));
+}
+// fallback path: tight household still found when random shuffles rarely succeed
+{
+  const codes = Array.from({ length: 20 }, (_, i) => "p" + i);
+  const big = new Map(codes.slice(0, 10).map((c) => [c, "x"]));
+  const pairs = makeRing(codes, big);
+  for (const [g, r] of pairs) assert.ok(!(big.has(g) && big.has(r)));
+}
+
+// linkPartner / pruneGroups / groupChanges
+{
+  let n = 0;
+  const id = () => "g" + ++n;
+  let g = linkPartner(new Map(), "a", "b", id);
+  assert.equal(g.get("a"), g.get("b"));
+  g = linkPartner(g, "c", "b", id);
+  assert.equal(new Set([g.get("a"), g.get("b"), g.get("c")]).size, 1, "trio");
+  g = linkPartner(g, "a", "", id);
+  assert.ok(!g.has("a") && g.get("b") === g.get("c"), "a left, b and c stay");
+  g = linkPartner(g, "c", "", id);
+  assert.equal(g.size, 0, "last one left clears the group");
+  g = linkPartner(new Map(), "a", "b", id);
+  g = linkPartner(g, "a", "c", id);
+  assert.ok(!g.has("b") && g.get("a") === g.get("c"), "moving a to c frees b");
+  assert.equal(linkPartner(new Map(), "a", "a", id).size, 0, "cannot link to self");
+  assert.equal(pruneGroups(new Map([["a", "x"], ["b", "y"], ["c", "y"]])).has("a"), false);
+  assert.deepEqual(groupChanges(new Map([["a", "x"]]), new Map(), ["a", "b"]), [["a", null]]);
+}
 
 console.log("match tests ok");

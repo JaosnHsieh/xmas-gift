@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS participants (
   wish_at TEXT,
   gives_to TEXT,
   bought INTEGER NOT NULL DEFAULT 0,
+  grp TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

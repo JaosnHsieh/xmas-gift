@@ -264,6 +264,16 @@ $('form').addEventListener('submit', async (e) => {
   } catch { msg.className = 'err'; msg.textContent = '連線失敗，再試一次 Network error, try again'; }
   $('save').disabled = false;
 });
+const partner = $('partner');
+if (partner) partner.addEventListener('change', async () => {
+  const msg = $('pmsg');
+  msg.textContent = '…';
+  try {
+    const r = await fetch(location.pathname + '/partner', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({other: partner.value})});
+    const j = await r.json();
+    msg.textContent = j.ok ? '✓ 已儲存 Saved' : (j.error || 'error');
+  } catch { msg.textContent = 'error'; }
+});
 const bought = $('bought');
 if (bought) bought.addEventListener('change', async () => {
   await fetch(location.pathname + '/bought', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({bought: bought.checked})});
@@ -289,7 +299,16 @@ ${[0, 1, 2].map((i) => `<input type="text" id="item${i}" maxlength="${LIMITS.ite
 <p id="msg" role="status"></p></form>`;
 }
 
-export function invitePage({ me, status, recipient, settings }) {
+function coupleCard(couple) {
+  if (!couple) return "";
+  const opts = couple.others.map((o) => `<option value="${esc(o.id)}" ${o.id === couple.current ? "selected" : ""}>${esc(o.name)}</option>`).join("");
+  return `<section class="card"><h2>${bi("💑 和誰住一起？（選填）", "Who do you live with? (optional)")}</h2>
+<p class="muted" style="margin:0 0 8px">${bi("同住的人不會互相配對，才有驚喜。", "Housemates and partners won’t be matched, so it stays a surprise.")}</p>
+<select id="partner"><option value="">${esc("— 沒有 None")}</option>${opts}</select>
+<p id="pmsg" role="status" class="muted" style="margin:6px 0 0"></p></section>`;
+}
+
+export function invitePage({ me, status, recipient, settings, couple }) {
   const wish = me.wish_json ? JSON.parse(me.wish_json) : null;
   const matched = status !== "collecting" && me.gives_to;
   const head = `<div class="hero"><div class="tree">🎅</div><p class="hello">${bi(`嗨，${esc(me.name)}！`, `Hi ${esc(me.name)}!`)}</p><h1>${bi("你的聖誕禮物頁", "Your gift page")}</h1></div>`;
@@ -305,7 +324,7 @@ export function invitePage({ me, status, recipient, settings }) {
   } else {
     main = `<section class="card"><h2>${bi("📝 我的 Wish List", "My wish list")}</h2>
 ${wish ? `<p class="ok">${bi("已填好，配對前可以修改。", "Done. You can still edit until matching.")}</p>` : `<p class="muted">${bi("請先填好 Wish List，才能開始配對。", "Please fill this in so matching can start.")}</p>`}
-${wishForm(wish)}</section>`;
+${wishForm(wish)}</section>${coupleCard(couple)}`;
   }
   const data = { cats: CATEGORIES, max: LIMITS.maxCats, wish };
   const body = `${head}<section class="card"><h2>${bi("目前進度", "Where we are")}</h2>${stepper(status)}</section>${main}${rulesCard()}${eventCard(settings)}
@@ -330,6 +349,10 @@ $('addBtn') && ($('addBtn').onclick = async () => {
   const names = $('names').value.split('\\n').map(s => s.trim()).filter(Boolean);
   if (!names.length) return;
   if (await call('add', {names})) location.reload();
+});
+document.querySelectorAll('[data-link]').forEach(s => s.onchange = async () => {
+  await call('link', {code: s.dataset.link, other: s.value});
+  location.reload();
 });
 document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
   if (confirm('刪除 ' + b.dataset.name + '？連結會失效。 Delete? Their link stops working.') && await call('remove', {code: b.dataset.del})) location.reload();
@@ -366,7 +389,11 @@ export function adminPage({ base, origin, settings, people }) {
   const canMatch = !matched && people.length >= 3;
   const rows = people.map((p) => {
     const link = `${origin}/${p.code}`;
-    return `<tr><td>${esc(p.name)}</td><td>${p.wish_json ? "✓" : "—"}</td><td>${p.bought ? "🎁" : ""}</td>
+    const mates = p.grp ? people.filter((q) => q.grp === p.grp && q.code !== p.code) : [];
+    const home = matched
+      ? esc(mates.map((q) => q.name).join("、"))
+      : `<select data-link="${esc(p.code)}"><option value="">—</option>${people.filter((q) => q.code !== p.code).map((q) => `<option value="${esc(q.code)}" ${mates.length && mates[0].code === q.code ? "selected" : ""}>${esc(q.name)}</option>`).join("")}</select>${mates.length > 1 ? `<div class="muted">+ ${esc(mates.slice(1).map((q) => q.name).join("、"))}</div>` : ""}`;
+    return `<tr><td>${esc(p.name)}</td><td>${p.wish_json ? "✓" : "—"}</td><td>${home}</td><td>${p.bought ? "🎁" : ""}</td>
 <td><code class="link">${esc(link)}</code></td>
 <td style="white-space:nowrap"><button class="btn small ghost" data-copy="${esc(link)}" data-name="${esc(p.name)}">copy</button>
 ${matched ? "" : `<button class="btn small ghost" data-del="${esc(p.code)}" data-name="${esc(p.name)}">✕</button>`}</td></tr>`;
@@ -380,7 +407,7 @@ ${matched ? "" : `<button class="btn small ghost" data-del="${esc(p.code)}" data
 <div style="margin-top:14px"><button class="btn block" id="saveSettings">${bi("儲存", "Save")}</button></div></section>
 <section class="card"><h2>${bi(`👥 參加者（${people.length}）`, `People (${people.length})`)}</h2>
 ${matched ? "" : `<label class="lbl">${bi("每行一個名字或 Instagram 帳號", "One name or Instagram handle per line")}</label><textarea id="names" rows="4" placeholder="@amy&#10;小明"></textarea><div style="margin:10px 0"><button class="btn alt block" id="addBtn">${bi("新增並產生連結", "Add and create links")}</button></div>`}
-${people.length ? `<div style="overflow-x:auto"><table><tr><th>${bi("名字", "Name")}</th><th>WL</th><th></th><th>${bi("連結", "Link")}</th><th></th></tr>${rows}</table></div><p><button class="btn small ghost" id="copyAll">${bi("複製全部連結", "Copy all links")}</button></p>` : ""}</section>
+${people.length ? `<div style="overflow-x:auto"><table><tr><th>${bi("名字", "Name")}</th><th>WL</th><th>${bi("同住", "Lives with")}</th><th></th><th>${bi("連結", "Link")}</th><th></th></tr>${rows}</table></div><p class="muted">${bi("同住欄選的人不會被配對到彼此（情侶、室友都可以；參加者也能在自己的頁面設定）。", "People linked in “Lives with” are never matched to each other (couples, housemates; they can also set it on their own page).")}</p><p><button class="btn small ghost" id="copyAll">${bi("複製全部連結", "Copy all links")}</button></p>` : ""}</section>
 <section class="card"><h2>${bi("🎲 配對", "Matching")}</h2>
 <p>${bi(`已填 ${filled} / ${people.length}`, `Wish lists done: ${filled} of ${people.length}`)}</p>
 ${matched
