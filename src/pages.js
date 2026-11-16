@@ -116,7 +116,7 @@ export function rulesCard() {
 <b>${bi("買給配對到的人", "For the person you’re matched with")}</b>
 <div class="det">${bi("CA$40 以上 ・ 買對方 Wish List 上的東西", "CA$40 or more · from their wish list")}</div>
 <div class="sub"><b>${bi("📝 Wish List 怎麼填", "How to fill your wish list")}</b>
-${bi("用專屬連結，選最多 3 種類別，或直接寫想要的東西。都可以就選「都可以」。", "Use your personal link. Pick up to 3 categories or type what you want. If anything is fine, choose “Anything’s fine”.")}</div></div></div>
+${bi("用專屬連結，點選或自己寫，最多 3 個。都可以就選「都可以」。", "Use your personal link. Tap or write up to 3 things. If anything is fine, choose “Anything’s fine”.")}</div></div></div>
 <p class="muted" style="margin:10px 0 0">${bi("📺 活動當天，電視會揭曉誰送誰。", "On party day the TV reveals who gives to whom.")}</p></section>`;
 }
 
@@ -193,7 +193,8 @@ const INVITE_JS = `
 const INIT = JSON.parse(document.getElementById('init').textContent);
 const CATS = INIT.cats, MAX = INIT.max;
 const $ = (id) => document.getElementById(id);
-let chosen = (INIT.wish && INIT.wish.cats) ? [...INIT.wish.cats] : [];
+const w0 = INIT.wish && INIT.wish.mode === 'list' ? INIT.wish : null;
+let chosen = w0 ? [...(w0.cats || []).map(c => c.startsWith('p:') ? c : 't:' + c.slice(2)), ...(w0.items || []).map(t => 't:' + t)].slice(0, MAX) : [];
 let mode = INIT.wish ? INIT.wish.mode : null;
 const label = (c) => {
   if (c.startsWith('p:')) { const k = CATS.find(x => x.id === c.slice(2)); return k ? {zh:k.zh,en:k.en} : {zh:c.slice(2),en:''}; }
@@ -218,11 +219,11 @@ function drawCats() {
     box.append(t);
   };
   CATS.forEach(k => tile('p:' + k.id, k.e || '🎁', k.zh, k.en));
-  chosen.filter(c => c.startsWith('c:')).forEach(c => tile(c, '✨', c.slice(2), ''));
+  chosen.filter(c => c.startsWith('t:')).forEach(c => tile(c, '✏️', c.slice(2), ''));
   $('catcount').textContent = '已選 ' + chosen.length + ' / ' + MAX + ' Picked';
   $('catcount').className = full ? 'ok' : 'muted';
   $('catq').disabled = full; $('catadd').disabled = full;
-  $('catq').placeholder = full ? '已選滿了，點掉一個再加 Full: tap one to remove' : '例：襪子、咖啡豆… e.g. socks';
+  $('catq').placeholder = full ? '已選滿了，點掉一個再加 Full: tap one to remove' : '例：鐵鏟、羊毛襪… e.g. a shovel';
 }
 function toggle(v) {
   const i = chosen.indexOf(v);
@@ -232,10 +233,10 @@ function toggle(v) {
   drawCats();
 }
 function addCustom() {
-  const t = $('catq').value.trim().slice(0, 30);
+  const t = $('catq').value.trim().slice(0, INIT.itemLen);
   if (!t) return;
   const hit = CATS.find(k => k.zh === t);
-  const v = hit ? 'p:' + hit.id : 'c:' + t;
+  const v = hit ? 'p:' + hit.id : 't:' + t;
   if (!chosen.includes(v)) toggle(v);
   $('catq').value = '';
 }
@@ -243,7 +244,6 @@ $('catadd').onclick = addCustom;
 $('catq').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } });
 document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', () => setMode(r.value)));
 if (INIT.wish && INIT.wish.mode === 'list') {
-  (INIT.wish.items || []).forEach((v, i) => { const el = $('item' + i); if (el) el.value = v; });
   $('note').value = INIT.wish.note || '';
 }
 setMode(mode); drawCats();
@@ -251,7 +251,7 @@ $('form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const msg = $('msg'); msg.className = ''; msg.textContent = '';
   if (!mode) { msg.className = 'err'; msg.textContent = '請先選一個 Please choose one above'; return; }
-  const body = mode === 'any' ? {mode} : {mode, cats: chosen, items: [0,1,2].map(i => $('item' + i).value), note: $('note').value};
+  const body = mode === 'any' ? {mode} : {mode, cats: chosen.filter(c => c.startsWith('p:')), items: chosen.filter(c => c.startsWith('t:')).map(c => c.slice(2)), note: $('note').value};
   $('save').disabled = true;
   try {
     const r = await fetch(location.pathname + '/wish', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
@@ -273,12 +273,10 @@ function wishForm(wish) {
 <label class="choice" data-mode="any"><input type="radio" name="mode" value="any"><span>${bi("都可以，讓送禮的人決定", "Anything’s fine. Let my gifter decide")}</span></label>
 <label class="choice" data-mode="list"><input type="radio" name="mode" value="list"><span>${bi("我想選種類或寫想要的東西", "I’ll pick categories or name what I want")}</span></label>
 <div id="listbox" hidden>
-<label class="lbl">${bi("1. 點選你喜歡的類別（最多 3 個）", "1. Tap the categories you like (up to 3)")} <span class="muted" id="catcount">已選 0 / 3</span></label>
+<label class="lbl">${bi("點選你想要的類別，或自己寫（最多 3 個）", "Tap what you like, or write your own (up to 3)")} <span class="muted" id="catcount">已選 0 / 3</span></label>
 <div class="cats" id="cats"></div>
-<label class="lbl">${bi("沒有你要的？自己加", "Not here? Add your own")}</label>
-<div class="addrow"><input type="text" id="catq" maxlength="30" autocomplete="off" enterkeyhint="done"><button type="button" class="btn alt small" id="catadd">${bi("加入", "Add")}</button></div>
-<label class="lbl">${bi("2. 有特別想要的東西？直接寫（選填，最多 3 個）", "2. Want something specific? Type it (optional, up to 3)")}</label>
-${[0, 1, 2].map((i) => `<input type="text" id="item${i}" maxlength="${LIMITS.itemLen}" placeholder="${["例：鐵鏟 e.g. a shovel", "例：某個牌子的襪子 e.g. wool socks", ""][i]}" style="margin-bottom:8px">`).join("")}
+<label class="lbl">${bi("沒有你要的？直接寫想要的東西", "Not here? Write what you want")}</label>
+<div class="addrow"><input type="text" id="catq" maxlength="${LIMITS.itemLen}" autocomplete="off" enterkeyhint="done"><button type="button" class="btn alt small" id="catadd">${bi("加入", "Add")}</button></div>
 <label class="lbl">${bi("備註（選填）", "Note (optional)")}</label>
 <textarea id="note" rows="2" maxlength="${LIMITS.noteLen}" placeholder="尺寸、顏色、過敏… Size, colour, allergies…"></textarea>
 </div>
@@ -304,7 +302,7 @@ export function invitePage({ me, status, recipient, settings }) {
 ${wish ? `<p class="ok">${bi("已填好，配對前可以修改。", "Done. You can still edit until matching.")}</p>` : `<p class="muted">${bi("請先填好 Wish List，才能開始配對。", "Please fill this in so matching can start.")}</p>`}
 ${wishForm(wish)}</section>`;
   }
-  const data = { cats: CATEGORIES, max: LIMITS.maxCats, wish };
+  const data = { cats: CATEGORIES, max: LIMITS.maxCats, itemLen: LIMITS.itemLen, wish };
   const body = `${head}<section class="card"><h2>${bi("目前進度", "Where we are")}</h2>${stepper(status)}</section>${main}${rulesCard()}${eventCard(settings)}
 <footer><a href="/" style="color:#cfe3d6">${bi("看大家的進度", "See everyone’s progress")}</a></footer>
 <script type="application/json" id="init">${jsonForScript(data)}</script>`;

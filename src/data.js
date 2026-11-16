@@ -45,12 +45,11 @@ export function parseWish(raw) {
       if (t && !cats.includes("c:" + t)) cats.push("c:" + t);
     }
   }
-  if (cats.length > LIMITS.maxCats) return { error: "類別最多 3 個 Up to 3 categories" };
   const items = (Array.isArray(raw.items) ? raw.items : [])
     .filter((s) => typeof s === "string")
     .map((s) => s.trim().slice(0, LIMITS.itemLen))
     .filter(Boolean);
-  if (items.length > LIMITS.maxItems) return { error: "具體項目最多 3 個 Up to 3 items" };
+  if (cats.length + items.length > LIMITS.maxCats) return { error: "最多選 3 個（類別和自己寫的加起來） Up to 3 picks in total" };
   const note = typeof raw.note === "string" ? raw.note.trim().slice(0, LIMITS.noteLen) : "";
   if (!cats.length && !items.length) {
     return { error: "請選至少一個類別或輸入項目，或選「都可以」 Pick a category, type an item, or choose “Anything’s fine”" };

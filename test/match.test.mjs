@@ -125,4 +125,14 @@ for (let n = 4; n <= 30; n++) {
   assert.throws(() => parseImport({ people: Array.from({ length: 101 }, (_, i) => `p${i}`) }), ImportError, "over 100 people");
 }
 
+{
+  const { parseWish } = await import("../src/data.js");
+  const ok = (r) => assert.ok(r.wish, JSON.stringify(r));
+  ok(parseWish({ mode: "list", cats: ["p:snacks", "p:coffee"], items: ["鐵鏟"], note: "x" }));
+  ok(parseWish({ mode: "list", cats: [], items: ["a", "b", "c"] }));
+  assert.ok(parseWish({ mode: "list", cats: ["p:snacks", "p:coffee"], items: ["a", "b"] }).error, "4 picks in total is refused");
+  assert.ok(parseWish({ mode: "list", cats: [], items: [] }).error, "needs at least one pick");
+  ok(parseWish({ mode: "list", cats: ["c:襪子"], items: ["鐵鏟"] })); // saved by the old form
+}
+
 console.log("match tests ok");
