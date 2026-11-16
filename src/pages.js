@@ -67,15 +67,18 @@ label.lbl{display:block;font-weight:700;margin:14px 0 6px}
 .choice{display:flex;gap:10px;align-items:flex-start;border:2px solid #d9c9a3;border-radius:14px;padding:12px 14px;margin:8px 0;background:#fff;cursor:pointer}
 .choice input{flex:none;margin:.45em 4px 0 2px;transform:scale(1.3)}
 .choice.sel{border-color:var(--red);background:#fff1ee}
-.combo{position:relative}
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
-.chip{background:var(--green);color:#fff;border-radius:999px;padding:5px 8px 5px 14px;display:flex;gap:8px;align-items:center;font-size:.95rem}
-.chip .en{color:#cfe3d6;display:inline;font-size:.8em;margin-left:4px}
-.chip button{border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:50%;width:26px;height:26px;font-size:1rem;cursor:pointer;line-height:1}
-.list{position:absolute;z-index:5;left:0;right:0;top:100%;margin:4px 0 0;padding:4px;list-style:none;background:#fff;border:2px solid var(--gold);border-radius:12px;max-height:260px;overflow:auto;box-shadow:0 8px 20px rgba(0,0,0,.25)}
-.list li{padding:9px 12px;border-radius:8px;cursor:pointer}
-.list li.hl,.list li:hover{background:#fff1d0}
-.list li .en{display:inline;margin-left:6px}
+.cats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:8px 0}
+.cat{position:relative;font:inherit;font-size:.95rem;display:flex;align-items:center;gap:8px;text-align:left;min-height:60px;padding:8px 10px;border:2px solid #d9c9a3;border-radius:14px;background:#fff;color:var(--ink);cursor:pointer}
+.cat .ic{font-size:1.4rem;flex:none}
+.cat .tx{display:block;line-height:1.25}
+.cat .en{display:block;font-size:.7em;color:var(--muted)}
+.cat.on{background:var(--green);border-color:var(--green);color:#fff}
+.cat.on .en{color:#cfe3d6}
+.cat.on::after{content:"✓";position:absolute;top:4px;right:8px;font-size:.85rem;font-weight:700}
+.cat.dim{opacity:.45}
+.addrow{display:flex;gap:8px;margin-top:6px}
+.addrow .btn{flex:none}
+@media(min-width:560px){.cats{grid-template-columns:repeat(3,1fr)}}
 .hint{background:#fff1d0;border-radius:12px;padding:10px 12px;font-size:.95rem;margin:8px 0}
 .hint .en{font-size:.85em}
 .ok{color:#2f7a52;font-weight:700}
@@ -203,53 +206,47 @@ function setMode(m) {
   document.querySelectorAll('.choice').forEach(c => c.classList.toggle('sel', c.dataset.mode === m));
   document.querySelectorAll('input[name=mode]').forEach(r => r.checked = r.value === m);
 }
-function drawChips() {
-  const box = $('chips'); box.replaceChildren();
-  chosen.forEach((c, i) => {
-    const l = label(c); const chip = mk('span', 'chip'); chip.append(mk('span', '', l.zh));
-    if (l.en) chip.lastChild.append(mk('span', 'en', l.en));
-    const b = mk('button', '', '×'); b.type = 'button'; b.setAttribute('aria-label', 'remove');
-    b.onclick = () => { chosen.splice(i, 1); drawChips(); drawList(); };
-    chip.append(b); box.append(chip);
-  });
+function drawCats() {
+  const box = $('cats'); box.replaceChildren();
   const full = chosen.length >= MAX;
-  $('catq').disabled = full;
-  $('catq').placeholder = full ? '已選滿 3 個 Max 3 reached' : '搜尋或輸入類別 Search or type a category';
-  $('catcount').textContent = chosen.length + ' / ' + MAX;
+  const tile = (v, ic, zh, en) => {
+    const on = chosen.includes(v);
+    const t = mk('button', 'cat' + (on ? ' on' : (full ? ' dim' : ''))); t.type = 'button'; t.setAttribute('aria-pressed', on);
+    t.append(mk('span', 'ic', ic));
+    const tx = mk('span', 'tx', zh); if (en) tx.append(mk('span', 'en', en)); t.append(tx);
+    t.onclick = () => toggle(v);
+    box.append(t);
+  };
+  CATS.forEach(k => tile('p:' + k.id, k.e || '🎁', k.zh, k.en));
+  chosen.filter(c => c.startsWith('c:')).forEach(c => tile(c, '✨', c.slice(2), ''));
+  $('catcount').textContent = '已選 ' + chosen.length + ' / ' + MAX + ' Picked';
+  $('catcount').className = full ? 'ok' : 'muted';
+  $('catq').disabled = full; $('catadd').disabled = full;
+  $('catq').placeholder = full ? '已選滿了，點掉一個再加 Full: tap one to remove' : '例：襪子、咖啡豆… e.g. socks';
 }
-let hl = 0, opts = [];
-function drawList() {
-  const q = $('catq').value.trim().toLowerCase();
-  opts = CATS.filter(k => !chosen.includes('p:' + k.id) && (!q || k.zh.toLowerCase().includes(q) || k.en.toLowerCase().includes(q) || k.id.includes(q)))
-    .map(k => ({v: 'p:' + k.id, zh: k.zh, en: k.en}));
-  const exact = CATS.some(k => k.zh.toLowerCase() === q || k.en.toLowerCase() === q);
-  if (q && !exact && !chosen.includes('c:' + $('catq').value.trim())) opts.push({v: 'c:' + $('catq').value.trim().slice(0, 30), zh: '＋ 自訂：' + $('catq').value.trim().slice(0, 30), en: 'Add your own'});
-  const ul = $('catlist'); ul.replaceChildren();
-  if (document.activeElement !== $('catq') || chosen.length >= MAX || !opts.length) { ul.hidden = true; return; }
-  hl = Math.min(hl, opts.length - 1);
-  opts.forEach((o, i) => {
-    const li = mk('li', i === hl ? 'hl' : '', o.zh); if (o.en) li.append(mk('span', 'en', o.en));
-    li.onpointerdown = (e) => { e.preventDefault(); pick(o); };
-    ul.append(li);
-  });
-  ul.hidden = false;
+function toggle(v) {
+  const i = chosen.indexOf(v);
+  if (i >= 0) chosen.splice(i, 1);
+  else if (chosen.length < MAX) chosen.push(v);
+  else { $('catcount').textContent = '最多 3 個，先點掉一個 Max 3: tap one to remove'; $('catcount').className = 'err'; return; }
+  drawCats();
 }
-function pick(o) { if (chosen.length < MAX && !chosen.includes(o.v)) chosen.push(o.v); $('catq').value = ''; hl = 0; drawChips(); drawList(); }
-$('catq').addEventListener('input', () => { hl = 0; drawList(); });
-$('catq').addEventListener('focus', drawList);
-$('catq').addEventListener('blur', () => setTimeout(drawList, 0));
-$('catq').addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowDown') { hl = Math.min(hl + 1, opts.length - 1); drawList(); e.preventDefault(); }
-  else if (e.key === 'ArrowUp') { hl = Math.max(hl - 1, 0); drawList(); e.preventDefault(); }
-  else if (e.key === 'Enter') { e.preventDefault(); if (opts[hl]) pick(opts[hl]); }
-  else if (e.key === 'Backspace' && !$('catq').value && chosen.length) { chosen.pop(); drawChips(); drawList(); }
-});
+function addCustom() {
+  const t = $('catq').value.trim().slice(0, 30);
+  if (!t) return;
+  const hit = CATS.find(k => k.zh === t);
+  const v = hit ? 'p:' + hit.id : 'c:' + t;
+  if (!chosen.includes(v)) toggle(v);
+  $('catq').value = '';
+}
+$('catadd').onclick = addCustom;
+$('catq').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } });
 document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', () => setMode(r.value)));
 if (INIT.wish && INIT.wish.mode === 'list') {
   (INIT.wish.items || []).forEach((v, i) => { const el = $('item' + i); if (el) el.value = v; });
   $('note').value = INIT.wish.note || '';
 }
-setMode(mode); drawChips();
+setMode(mode); drawCats();
 $('form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const msg = $('msg'); msg.className = ''; msg.textContent = '';
@@ -276,11 +273,11 @@ function wishForm(wish) {
 <label class="choice" data-mode="any"><input type="radio" name="mode" value="any"><span>${bi("都可以，讓送禮的人決定", "Anything’s fine. Let my gifter decide")}</span></label>
 <label class="choice" data-mode="list"><input type="radio" name="mode" value="list"><span>${bi("我想選種類或寫想要的東西", "I’ll pick categories or name what I want")}</span></label>
 <div id="listbox" hidden>
-<div class="hint">${bi("想要鐵鏟？直接在下方「想要的項目」輸入「鐵鏟」就好。", "Want a shovel? Just type “shovel” under Specific items.")}</div>
-<label class="lbl">${bi("類別（1 到 3 個）", "Categories (1 to 3)")} <span class="muted" id="catcount">0 / 3</span></label>
-<div class="combo"><div class="chips" id="chips"></div>
-<input type="text" id="catq" autocomplete="off" enterkeyhint="done" placeholder="搜尋或輸入類別 Search or type a category"><ul class="list" id="catlist" hidden></ul></div>
-<label class="lbl">${bi("想要的項目（選填，最多 3 個）", "Specific items (optional, up to 3)")}</label>
+<label class="lbl">${bi("1. 點選你喜歡的類別（最多 3 個）", "1. Tap the categories you like (up to 3)")} <span class="muted" id="catcount">已選 0 / 3</span></label>
+<div class="cats" id="cats"></div>
+<label class="lbl">${bi("沒有你要的？自己加", "Not here? Add your own")}</label>
+<div class="addrow"><input type="text" id="catq" maxlength="30" autocomplete="off" enterkeyhint="done"><button type="button" class="btn alt small" id="catadd">${bi("加入", "Add")}</button></div>
+<label class="lbl">${bi("2. 有特別想要的東西？直接寫（選填，最多 3 個）", "2. Want something specific? Type it (optional, up to 3)")}</label>
 ${[0, 1, 2].map((i) => `<input type="text" id="item${i}" maxlength="${LIMITS.itemLen}" placeholder="${["例：鐵鏟 e.g. a shovel", "例：某個牌子的襪子 e.g. wool socks", ""][i]}" style="margin-bottom:8px">`).join("")}
 <label class="lbl">${bi("備註（選填）", "Note (optional)")}</label>
 <textarea id="note" rows="2" maxlength="${LIMITS.noteLen}" placeholder="尺寸、顏色、過敏… Size, colour, allergies…"></textarea>
