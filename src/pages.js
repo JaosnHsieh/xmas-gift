@@ -348,6 +348,10 @@ document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
 document.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => {
   try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = '✓'; } catch { prompt('Copy:', b.dataset.copy); }
 });
+document.querySelectorAll('[data-msg]').forEach(b => b.onclick = async () => {
+  const keep = b.innerHTML;
+  try { await navigator.clipboard.writeText(b.dataset.msg); b.textContent = '✓ 已複製 Copied'; setTimeout(() => b.innerHTML = keep, 1500); } catch { prompt('Copy:', b.dataset.msg); }
+});
 $('copyAll') && ($('copyAll').onclick = async () => {
   const t = [...document.querySelectorAll('[data-copy]')].map(b => b.dataset.name + ': ' + b.dataset.copy).join('\\n');
   try { await navigator.clipboard.writeText(t); $('copyAll').textContent = '✓'; } catch { prompt('Copy:', t); }
@@ -377,13 +381,15 @@ export function adminPage({ base, origin, settings, people }) {
   const canMatch = !matched && people.length >= 3;
   const rows = people.map((p) => {
     const link = `${origin}/${p.code}`;
+    const msg = `嗨 ${p.name}！🎄 這是你的聖誕交換禮物專屬連結，請不要轉給別人：\n${link}\n點開填 Wish List 就可以了，謝謝！`;
     const mates = p.grp ? people.filter((q) => q.grp === p.grp && q.code !== p.code) : [];
     const home = matched
       ? esc(mates.map((q) => q.name).join("、"))
       : `<select data-link="${esc(p.code)}"><option value="">—</option>${people.filter((q) => q.code !== p.code).map((q) => `<option value="${esc(q.code)}" ${mates.length && mates[0].code === q.code ? "selected" : ""}>${esc(q.name)}</option>`).join("")}</select>${mates.length > 1 ? `<div class="muted">+ ${esc(mates.slice(1).map((q) => q.name).join("、"))}</div>` : ""}`;
     return `<tr><td>${esc(p.name)}</td><td>${p.wish_json ? "✓" : "—"}</td><td>${home}</td><td>${p.bought ? "🎁" : ""}</td>
 <td><code class="link">${esc(link)}</code></td>
-<td style="white-space:nowrap"><button class="btn small ghost" data-copy="${esc(link)}" data-name="${esc(p.name)}">copy</button>
+<td style="white-space:nowrap"><button class="btn small" data-msg="${esc(msg)}">${bi("複製邀請訊息", "Copy invite")}</button>
+<button class="btn small ghost" data-copy="${esc(link)}" data-name="${esc(p.name)}">link</button>
 ${matched ? "" : `<button class="btn small ghost" data-del="${esc(p.code)}" data-name="${esc(p.name)}">✕</button>`}</td></tr>`;
   }).join("");
   const body = `<div class="hero"><div class="tree">🛠️</div><h1>${bi("後台", "Admin")}</h1></div>
