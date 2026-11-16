@@ -108,4 +108,21 @@ for (let n = 4; n <= 30; n++) {
   assert.deepEqual(groupChanges(new Map([["a", "x"]]), new Map(), ["a", "b"]), [["a", null]]);
 }
 
+{
+  const { parseImport, ImportError } = await import("../src/importer.js");
+  const r = parseImport({ people: ["Amy", { name: "Ben" }, "amy", "小明"], households: [["Amy", "ben"]] }, ["Cat"]);
+  assert.deepEqual(r.add, ["Amy", "Ben", "小明"], "dedupes by name, ignoring case");
+  assert.deepEqual(r.households, [["Amy", "Ben"]]);
+  const again = parseImport({ people: ["Cat", "Dan"], households: [["cat", "Dan"]] }, ["Cat"]);
+  assert.deepEqual(again.add, ["Dan"], "existing people are not added twice");
+  assert.deepEqual(again.households, [["Cat", "Dan"]], "households can include people already stored");
+  for (const bad of [
+    null, [], { people: "x" }, { people: [""] }, { people: ["a".repeat(41)] },
+    { people: ["A", "B"], households: [["A"]] },
+    { people: ["A", "B"], households: [["A", "Z"]] },
+    { people: ["A", "B", "C"], households: [["A", "B"], ["B", "C"]] },
+  ]) assert.throws(() => parseImport(bad), ImportError, JSON.stringify(bad));
+  assert.throws(() => parseImport({ people: Array.from({ length: 101 }, (_, i) => `p${i}`) }), ImportError, "over 100 people");
+}
+
 console.log("match tests ok");

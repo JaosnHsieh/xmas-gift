@@ -2,6 +2,7 @@ import { parseWish } from "./data.js";
 import { makeRing, walkRing } from "./match.js";
 import { linkPartner, pruneGroups, groupChanges } from "./groups.js";
 import { homePage, invitePage, loginPage, adminPage, layout, esc, endStamp, icsStamp } from "./pages.js";
+import { parseImport, ImportError } from "./importer.js";
 import { revealPage } from "./reveal.js";
 
 const ALPHABET = "23456789abcdefghjkmnpqrstuvwxyz";
@@ -208,6 +209,29 @@ async function adminApi(db, body) {
       const stmts = names.map((n) => db.prepare("INSERT INTO participants (code, name) VALUES (?1, ?2)").bind(newCode(), n));
       if (stmts.length) await db.batch(stmts);
       return json({ ok: true });
+    }
+    case "import": {
+      const settings = await getSettings(db);
+      if ((settings.status || "collecting") !== "collecting") return json({ ok: false, error: "已配對，先取消配對才能匯入 Reopen before importing" }, 400);
+      const before = await getPeople(db);
+      let plan;
+      try {
+        plan = parseImport(body.data, before.map((p) => p.name));
+      } catch (e) {
+        if (!(e instanceof ImportError)) throw e;
+        return json({ ok: false, error: e.message }, 400);
+      }
+      const created = plan.add.map((name) => ({ code: newCode(), name }));
+      if (created.length) await db.batch(created.map((p) => db.prepare("INSERT INTO participants (code, name) VALUES (?1, ?2)").bind(p.code, p.name)));
+      const people = await getPeople(db);
+      const byName = new Map(people.map((p) => [p.name.trim().toLowerCase(), p.code]));
+      const next = groupMap(people);
+      for (const h of plan.households) {
+        const id = newCode();
+        for (const n of h) next.set(byName.get(n.trim().toLowerCase()), id);
+      }
+      await saveGroups(db, people, pruneGroups(next));
+      return json({ ok: true, added: created.length, households: plan.households.length });
     }
     case "remove": {
       const settings = await getSettings(db);

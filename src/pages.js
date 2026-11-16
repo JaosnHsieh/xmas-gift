@@ -331,6 +331,13 @@ $('addBtn') && ($('addBtn').onclick = async () => {
   if (!names.length) return;
   if (await call('add', {names})) location.reload();
 });
+$('fileIn') && ($('fileIn').onchange = async () => { const f = $('fileIn').files[0]; if (f) $('importText').value = await f.text(); });
+$('importBtn') && ($('importBtn').onclick = async () => {
+  let data;
+  try { data = JSON.parse($('importText').value); } catch { alert('不是正確的 JSON Not valid JSON'); return; }
+  const j = await call('import', {data});
+  if (j) { alert('新增 ' + j.added + ' 人，同住 ' + j.households + ' 組。 Added ' + j.added + ' people, ' + j.households + ' households.'); location.reload(); }
+});
 document.querySelectorAll('[data-link]').forEach(s => s.onchange = async () => {
   await call('link', {code: s.dataset.link, other: s.value});
   location.reload();
@@ -387,7 +394,11 @@ ${matched ? "" : `<button class="btn small ghost" data-del="${esc(p.code)}" data
 <label class="lbl">${bi("地點", "Place")}</label><input type="text" id="eplace" maxlength="120" value="${esc(settings.event_place || "")}">
 <div style="margin-top:14px"><button class="btn block" id="saveSettings">${bi("儲存", "Save")}</button></div></section>
 <section class="card"><h2>${bi(`👥 參加者（${people.length}）`, `People (${people.length})`)}</h2>
-${matched ? "" : `<label class="lbl">${bi("每行一個名字或 Instagram 帳號", "One name or Instagram handle per line")}</label><textarea id="names" rows="4" placeholder="@amy&#10;小明"></textarea><div style="margin:10px 0"><button class="btn alt block" id="addBtn">${bi("新增並產生連結", "Add and create links")}</button></div>`}
+${matched ? "" : `<label class="lbl">${bi("每行一個名字或 Instagram 帳號", "One name or Instagram handle per line")}</label><textarea id="names" rows="4" placeholder="@amy&#10;小明"></textarea><div style="margin:10px 0"><button class="btn alt block" id="addBtn">${bi("新增並產生連結", "Add and create links")}</button></div>
+<details style="margin:14px 0"><summary>${bi("📥 用檔案匯入名單和同住", "📥 Import people and households from a file")}</summary>
+<p class="muted">${bi("選 JSON 檔或直接貼上。名單裡已經有的名字不會重複新增。", "Pick a JSON file or paste it. Names already in the list are not added twice.")}</p>
+<input type="file" id="fileIn" accept=".json,application/json"><textarea id="importText" rows="6" placeholder='{"people":["Amy","Ben"],"households":[["Amy","Ben"]]}' style="margin-top:8px"></textarea>
+<div style="margin:10px 0"><button class="btn alt block" id="importBtn">${bi("匯入", "Import")}</button></div></details>`}
 ${people.length ? `<div style="overflow-x:auto"><table><tr><th>${bi("名字", "Name")}</th><th>WL</th><th>${bi("同住", "Lives with")}</th><th></th><th>${bi("連結", "Link")}</th><th></th></tr>${rows}</table></div><p class="muted">${bi("同住欄選的人不會被配對到彼此（情侶、室友都可以）。", "People linked in “Lives with” are never matched to each other (couples, housemates).")}</p><p><button class="btn small ghost" id="copyAll">${bi("複製全部連結", "Copy all links")}</button></p>` : ""}</section>
 <section class="card"><h2>${bi("🎲 配對", "Matching")}</h2>
 <p>${bi(`已填 ${filled} / ${people.length}`, `Wish lists done: ${filled} of ${people.length}`)}</p>
