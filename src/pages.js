@@ -113,11 +113,11 @@ export function rulesCard() {
 <b>${bi("現場玩，不配對", "Played at the party. No matching")}</b>
 <div class="det">${bi("CA$10 以下 ・ 不過期 ・ 全新未拆封", "Under CA$10 · no expiry · new and sealed")}</div></div></div>
 <div class="rule"><span class="badge good">${bi("好禮物", "Good gift")}</span><div>
-<b>${bi("買給配對到的人", "For the person you’re matched with")}</b>
-<div class="det">${bi("CA$40 以上 ・ 買對方 Wish List 上的東西", "CA$40 or more · from their wish list")}</div>
+<b>${bi("照 Wish List 買，現場隨機抽籤", "Bought from a wish list, drawn at random at the party")}</b>
+<div class="det">${bi("CA$40 以上 ・ 系統會分你一份別人的 Wish List 來買", "CA$40 or more · you get someone’s wish list to buy from")}</div>
 <div class="sub"><b>${bi("📝 Wish List 怎麼填", "How to fill your wish list")}</b>
-${bi("用專屬連結，點選或自己寫，最多 3 個。都可以就選「都可以」。", "Use your personal link. Tap or write up to 3 things. If anything is fine, choose “Anything’s fine”.")}</div></div></div>
-<p class="muted" style="margin:10px 0 0">${bi("📺 活動當天，電視會揭曉誰送誰。", "On party day the TV reveals who gives to whom.")}</p></section>`;
+${bi("用專屬連結，點選或自己寫，最多 3 個。都可以就選「都可以」。這樣大家抽到的禮物比較會是你喜歡的，買的人也不用煩惱買什麼。", "Use your personal link. Tap or write up to 3 things. If anything is fine, choose “Anything’s fine”. It makes the draw more likely to give you something you like, and the buyer doesn’t have to guess.")}</div></div></div>
+<p class="muted" style="margin:10px 0 0">${bi("📺 活動當天，電視會揭曉誰買了誰的 Wish List。", "On party day the TV reveals who bought from whose wish list.")}</p></section>`;
 }
 
 function fmtDate(v) {
@@ -161,7 +161,7 @@ export function homePage({ settings, people }) {
   const bought = people.filter((p) => p.bought).length;
   const matched = status !== "collecting";
   const note = matched
-    ? `<div class="hint">${bi("配對完成！請用你專屬的連結查看要買給誰（匿名）。", "Matching is done! Open your personal link to see who you’re buying for (anonymous).")}</div>`
+    ? `<div class="hint">${bi("配對完成！請用你專屬的連結查看要買哪一份 Wish List（匿名）。", "Matching is done! Open your personal link to see which wish list to buy from (anonymous).")}</div>`
     : `<div class="hint">${bi("請用私訊給你的專屬連結填 Wish List。", "Use the personal link sent to you to fill your wish list.")}</div>`;
   const progress = matched
     ? `<p class="muted">${bi(`已買好 ${bought} / ${people.length}`, `Gifts bought: ${bought} of ${people.length}`)}</p>`
@@ -291,9 +291,9 @@ export function invitePage({ me, status, recipient, settings }) {
   let main;
   if (matched) {
     const rw = recipient && recipient.wish_json ? JSON.parse(recipient.wish_json) : { mode: "any" };
-    main = `<section class="card"><h2>${bi("🎁 你要買好禮物給：", "Your good gift goes to:")}</h2>
-<div class="gift"><p style="margin:0 0 6px"><b>${bi("一位神秘朋友", "A mystery friend")}</b></p>
-<p class="muted" style="margin:0 0 8px">${bi("下面是對方的 Wish List。請買這裡面的東西（CA$40 以上）。", "Here is their wish list. Buy something from it (CA$40 or more).")}</p>${renderWish(rw)}</div>
+    main = `<section class="card"><h2>${bi("🎁 你的好禮物，請買這份 Wish List：", "For your good gift, buy from this wish list:")}</h2>
+<div class="gift"><p style="margin:0 0 6px"><b>${bi("一位神秘朋友的 Wish List", "A mystery friend’s wish list")}</b></p>
+<p class="muted" style="margin:0 0 8px">${bi("請買下面這裡面的東西（CA$40 以上）。禮物會在現場隨機抽籤，不一定是給這位朋友。", "Buy something from it (CA$40 or more). Gifts are drawn at random at the party, so it may not go to this friend.")}</p>${renderWish(rw)}</div>
 <label class="choice" style="margin-top:14px"><input type="checkbox" id="bought" ${me.bought ? "checked" : ""}><span>${bi("我買好了", "I’ve bought it")}</span></label>
 <p class="muted">${bi("請保密，活動當天再揭曉！別忘了另外準備壞禮物（CA$10 以下、不過期、全新未拆封）。", "Keep it secret until the party! Also bring a bad gift (under CA$10, no expiry, new and sealed).")}</p></section>
 <details class="card"><summary>${bi("我自己的 Wish List", "My own wish list")}</summary>${renderWish(wish)}</details>`;
