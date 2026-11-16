@@ -233,6 +233,13 @@ async function adminApi(db, body) {
       await saveGroups(db, people, pruneGroups(next));
       return json({ ok: true, added: created.length, households: plan.households.length });
     }
+    case "rename": {
+      const name = String(body.name || "").trim().slice(0, 40);
+      if (!name) return json({ ok: false, error: "名字不能是空的 Name can’t be empty" }, 400);
+      const res = await db.prepare("UPDATE participants SET name = ?2 WHERE code = ?1").bind(String(body.code || ""), name).run();
+      if (!res.meta.changes) return json({ ok: false, error: "not found" }, 400);
+      return json({ ok: true });
+    }
     case "remove": {
       const settings = await getSettings(db);
       if ((settings.status || "collecting") !== "collecting") return json({ ok: false, error: "已配對 Already matched" }, 400);

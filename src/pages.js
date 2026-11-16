@@ -339,6 +339,10 @@ document.querySelectorAll('[data-link]').forEach(s => s.onchange = async () => {
   await call('link', {code: s.dataset.link, other: s.value});
   location.reload();
 });
+document.querySelectorAll('[data-rename]').forEach(b => b.onclick = async () => {
+  const n = prompt('新名字 New name', b.dataset.name);
+  if (n && n.trim() && n.trim() !== b.dataset.name && await call('rename', {code: b.dataset.rename, name: n})) location.reload();
+});
 document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
   if (confirm('刪除 ' + b.dataset.name + '？連結會失效。 Delete? Their link stops working.') && await call('remove', {code: b.dataset.del})) location.reload();
 });
@@ -383,7 +387,7 @@ export function adminPage({ base, origin, settings, people }) {
     const home = matched
       ? esc(mates.map((q) => q.name).join("、"))
       : `<select data-link="${esc(p.code)}"><option value="">—</option>${people.filter((q) => q.code !== p.code).map((q) => `<option value="${esc(q.code)}" ${mates.length && mates[0].code === q.code ? "selected" : ""}>${esc(q.name)}</option>`).join("")}</select>${mates.length > 1 ? `<div class="muted">+ ${esc(mates.slice(1).map((q) => q.name).join("、"))}</div>` : ""}`;
-    return `<tr><td>${esc(p.name)}</td><td>${p.wish_json ? "✓" : "—"}</td><td>${home}</td><td>${p.bought ? "🎁" : ""}</td>
+    return `<tr><td>${esc(p.name)} <button class="btn small ghost" data-rename="${esc(p.code)}" data-name="${esc(p.name)}" aria-label="rename">✎</button></td><td>${p.wish_json ? "✓" : "—"}</td><td>${home}</td><td>${p.bought ? "🎁" : ""}</td>
 <td><code class="link">${esc(link)}</code></td>
 <td style="white-space:nowrap"><button class="btn small" data-msg="${esc(msg)}">${bi("複製邀請訊息", "Copy invite")}</button>
 <button class="btn small ghost" data-copy="${esc(link)}" data-name="${esc(p.name)}">link</button>
