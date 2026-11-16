@@ -110,7 +110,7 @@ function stepper(status) {
 export function rulesCard() {
   return `<section class="card"><h2>${bi("🎁 每人準備 2 份禮物", "Bring two gifts each")}</h2>
 <div class="rule"><span class="badge bad">${bi("壞禮物", "Bad gift")}</span><div>
-<b>${bi("現場玩，不配對", "Played at the party. No matching")}</b>
+<b>${bi("現場隨機抽籤，不配對", "Drawn at random at the party. No matching")}</b>
 <div class="det">${bi("CA$10 以下 ・ 不過期 ・ 全新未拆封", "Under CA$10 · no expiry · new and sealed")}</div></div></div>
 <div class="rule"><span class="badge good">${bi("好禮物", "Good gift")}</span><div>
 <b>${bi("照 Wish List 買，現場隨機抽籤", "Bought from a wish list, drawn at random at the party")}</b>
